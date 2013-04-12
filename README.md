@@ -24,15 +24,20 @@ under and some laws it must obey.
 
 ### Functor
 
-1. `u.map(function(a) { return a; }))` equals `u`
-2. `u.map(function(x) { return f(g(x)); })` equals `u.map(g).map(f)`
+Functor values **MUST** implement `map` function that complies to
+a following rules:
 
-#### `map` method
+1. `map(u, function(a) { return a; })` equals `u`
+2. `map(u, function(x) { return f(g(x)); })` equals `map(map(u, g), f)`
 
-A value which has a functor must provide a `map` method. The `map`
-method takes one argument:
+#### `map` function
 
-    u.map(f)
+A value which has a functor must provide a `map` implementation. That takes
+functor value and `f` function:
+
+    map.define(u, function(u, f) {
+      // ...
+    })
 
 1. `f` must be a function,
 
@@ -45,48 +50,46 @@ method takes one argument:
 ### Monad
 
 A value which satisfies the specification of a monad do not need to implement:
+Functor's  `map` as it's defined by default:
 
-* Functor's `map`; derivable as `function(f) { var m = this; return
-  m.then(function(a) { return m.constructor.of(f(a)); })}`
+```js
+map.define(Object, function(wrapped, f) {
+   return flatMap(wrapped, function(unwrapped) {
+      return derive(wrapped, f(unwrapped));
+   });
+});
+```
 
 1. `of(a).then(f)` equals `f(a)`
+2. 
+2. `flatMap(m, function(u) { return derive(m, u) })` equals `m`
 2. `m.then(of)` equals `m`
 3. `m.then(f).then(g)` equals `m.then(function(x) { return f(x).then(g); })`
 
-#### `then` method
+#### `flatMap` function
 
-A value which has a monad must provide a `then` method. The `then`
-method takes one argument:
+A value which is a monad must provide a `flatMap` implementation. The `flatMap`
+function takes `m` monad and `f` function as arguments:
 
-    m.then(f)
+    flatMap(m, f)
 
 1. `f` must be a function which returns a value
 
-    1. If `f` is not a function, the behaviour of `then` is
+    1. If `f` is not a function, the behaviour of `flatMap` is
        unspecified.
     2. `f` must return a value of the same monad
 
-2. `then` must return a value of the same monad
+2. `flatMap` must return a value of the same monad
 
-#### `constructor.of` method
+#### `derive` function
 
-A value which has a monad must provide a `constructor` object. The
-`constructor` object must have an `of` method which takes one
-argument:
+A value which has a monad must provide `derive` implementation.
+Implementation must take `source` argument and `value`:
 
-    m.constructor.of(a)
+```js
+derive(m, a)
+```
 
-1. `of` must provide a value of the same monad
+1. `derive` must provide a value of the same monad
 
     1. No parts of `a` should be checked
-
-## Notes
-
-1. If there's more than a single way to implement the methods and
-   laws, the implementation should choose one and provide wrappers for
-   other uses.
-2. It's discouraged to overload the specified methods. It can easily
-   result in broken and buggy behaviour.
-3. It is recommended to throw an exception on unspecified behaviour.
-4. An `Id` container which implements all methods is provided in
-   `id.js`.
